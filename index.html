@@ -7,17 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { 
-            font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-        }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .loader { border-top-color: #6366f1; animation: spinner 0.8s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .glass-card { 
-            background: rgba(255, 255, 255, 0.98); 
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(226, 232, 240, 0.8); 
-        }
+        .glass-card { background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(8px); border: 1px solid rgba(226, 232, 240, 0.8); }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
@@ -32,17 +25,15 @@
     </div>
 
     <div class="max-w-6xl mx-auto px-4 py-6 md:py-10">
-        <!-- Header -->
         <header class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
             <div>
                 <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Thompson Budgeting</h1>
                 <p class="text-slate-500 font-medium tracking-tight">External Sheet Integration</p>
             </div>
             <div class="flex items-center gap-4">
-                <button onclick="refreshData()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Refresh Data">
+                <button onclick="refreshData()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
                 </button>
-                <div class="h-8 w-[1px] bg-slate-200 hidden md:block"></div>
                 <div class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-full border border-indigo-100">
                     <span class="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
                     <span class="text-[10px] font-black text-indigo-700 uppercase tracking-widest">External Link</span>
@@ -50,144 +41,65 @@
             </div>
         </header>
 
-        <!-- Dashboard Stats -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div class="glass-card p-6 rounded-3xl shadow-sm border-l-8 border-emerald-500">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-black uppercase tracking-widest text-slate-400">Monthly Income</span>
-                    <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-                    </div>
-                </div>
+                <span class="text-xs font-black uppercase tracking-widest text-slate-400 block mb-2">Monthly Income</span>
                 <h2 id="total-income" class="text-3xl font-black text-slate-800 tracking-tight">$0.00</h2>
             </div>
-
             <div class="glass-card p-6 rounded-3xl shadow-sm border-l-8 border-rose-500">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-black uppercase tracking-widest text-slate-400">Total Bills</span>
-                    <div class="p-2 bg-rose-50 text-rose-600 rounded-xl">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7 7 7-7"/><path d="M12 19V5"/></svg>
-                    </div>
-                </div>
+                <span class="text-xs font-black uppercase tracking-widest text-slate-400 block mb-2">Total Bills</span>
                 <h2 id="total-bills" class="text-3xl font-black text-slate-800 tracking-tight">$0.00</h2>
             </div>
-
             <div id="balance-card" class="glass-card p-6 rounded-3xl shadow-sm border-l-8 border-indigo-500 transition-all duration-500">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-black uppercase tracking-widest text-slate-400">Net Remaining</span>
-                    <div id="balance-icon-bg" class="p-2 bg-indigo-50 text-indigo-600 rounded-xl transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m17 5-5-3-5 3"/><path d="m17 19-5 3-5-3"/><rect width="12" height="12" x="6" y="6" rx="2"/></svg>
-                    </div>
-                </div>
+                <span class="text-xs font-black uppercase tracking-widest text-slate-400 block mb-2">Net Remaining</span>
                 <h2 id="net-balance" class="text-3xl font-black text-slate-800 tracking-tight">$0.00</h2>
             </div>
         </div>
 
-        <!-- Main Workspace -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <!-- Entry Form -->
             <div class="lg:col-span-4">
                 <div class="glass-card p-8 rounded-3xl shadow-lg sticky top-6">
-                    <h3 class="text-xl font-black mb-8 flex items-center gap-3">
-                        <span class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center text-sm">+</span>
-                        Log Transaction
-                    </h3>
-                    
+                    <h3 class="text-xl font-black mb-8 flex items-center gap-3">Log Transaction</h3>
                     <form id="transaction-form" class="space-y-6">
-                        <div class="space-y-3">
-                            <label class="block text-[11px] font-black uppercase tracking-widest text-slate-500">Type</label>
-                            <div class="grid grid-cols-2 gap-3">
-                                <label class="cursor-pointer group">
-                                    <input type="radio" name="type" value="income" class="peer sr-only" checked>
-                                    <div class="py-3 text-center rounded-2xl border-2 border-slate-100 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 font-bold text-sm transition-all group-hover:bg-slate-50">
-                                        Income
-                                    </div>
-                                </label>
-                                <label class="cursor-pointer group">
-                                    <input type="radio" name="type" value="bill" class="peer sr-only">
-                                    <div class="py-3 text-center rounded-2xl border-2 border-slate-100 peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:text-rose-700 font-bold text-sm transition-all group-hover:bg-slate-50">
-                                        Bill
-                                    </div>
-                                </label>
-                            </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer"><input type="radio" name="type" value="income" class="peer sr-only" checked><div class="py-3 text-center rounded-2xl border-2 border-slate-100 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 font-bold text-sm">Income</div></label>
+                            <label class="cursor-pointer"><input type="radio" name="type" value="bill" class="peer sr-only"><div class="py-3 text-center rounded-2xl border-2 border-slate-100 peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:text-rose-700 font-bold text-sm">Bill</div></label>
                         </div>
-
-                        <div class="space-y-3">
-                            <label class="block text-[11px] font-black uppercase tracking-widest text-slate-500">Details</label>
-                            <input type="text" id="description" required placeholder="e.g., Turo Booking" 
-                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm font-medium">
-                            <div class="relative">
-                                <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
-                                <input type="number" id="amount" required step="0.01" min="0" placeholder="0.00" 
-                                    class="w-full pl-10 pr-5 py-4 rounded-2xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm font-medium">
-                            </div>
-                        </div>
-
-                        <div class="space-y-3">
-                            <label class="block text-[11px] font-black uppercase tracking-widest text-slate-500">Metadata</label>
-                            <select id="category" class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm font-medium appearance-none">
-                                <option value="General">General</option>
-                            </select>
-                            <input type="date" id="date" required 
-                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm font-medium">
-                        </div>
-
-                        <button type="submit" class="w-full bg-slate-900 text-white font-black py-5 rounded-2xl hover:bg-indigo-600 shadow-xl shadow-indigo-200 transition-all transform active:scale-[0.98]">
-                            Sync to Spreadsheet
-                        </button>
+                        <input type="text" id="description" required placeholder="Description" class="w-full px-5 py-4 rounded-2xl border border-slate-200">
+                        <input type="number" id="amount" required step="0.01" placeholder="Amount ($)" class="w-full px-5 py-4 rounded-2xl border border-slate-200">
+                        <select id="category" class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white">
+                            <option value="General">General</option>
+                        </select>
+                        <input type="date" id="date" required class="w-full px-5 py-4 rounded-2xl border border-slate-200">
+                        <button type="submit" class="w-full bg-slate-900 text-white font-black py-5 rounded-2xl hover:bg-indigo-600 transition-all">Sync to Sheet</button>
                     </form>
                 </div>
             </div>
 
-            <!-- Ledger Area -->
             <div class="lg:col-span-8">
-                <div class="glass-card rounded-3xl shadow-sm overflow-hidden flex flex-col">
-                    <div class="p-6 md:p-8 border-b border-slate-100 flex items-center justify-between bg-white/50">
-                        <div>
-                            <h3 class="text-xl font-black">Transaction Ledger</h3>
-                            <p id="entry-count" class="text-sm text-slate-400 font-medium">Loading entries...</p>
-                        </div>
-                    </div>
-                    
-                    <div class="custom-scrollbar overflow-y-auto max-h-[700px] min-h-[400px]">
-                        <ul id="transaction-list" class="divide-y divide-slate-50">
-                            <!-- Transactions injected here -->
-                        </ul>
-                        <!-- Empty/Loading States -->
-                        <div id="empty-state" class="hidden flex flex-col items-center justify-center py-32 text-slate-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mb-6 opacity-20"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" x2="12" y1="18" y2="12"/><line x1="9" x2="15" y1="15" y2="15"/></svg>
-                            <p class="text-lg font-bold">No Records Found</p>
-                            <p class="text-sm">Log your first income or bill to see it here.</p>
-                        </div>
-                    </div>
+                <div class="glass-card rounded-3xl shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+                    <div class="p-8 border-b border-slate-100"><h3 class="text-xl font-black">History</h3><p id="entry-count" class="text-sm text-slate-400">Loading...</p></div>
+                    <ul id="transaction-list" class="divide-y divide-slate-50"></ul>
+                    <div id="empty-state" class="hidden py-32 text-center text-slate-300"><p class="text-lg font-bold">No Records Found</p></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Notification -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-8 py-4 rounded-2xl shadow-2xl transform translate-y-32 opacity-0 transition-all duration-500 z-50 flex items-center gap-3 font-bold">
-        <div class="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
-        <span id="toast-msg">Entry Saved Successfully!</span>
-    </div>
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-8 py-4 rounded-2xl shadow-2xl opacity-0 transition-all duration-500 z-50 font-bold">Transaction logged!</div>
 
     <script>
         /**
-         * PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
-         * It should look like: https://script.google.com/macros/s/ABC...XYZ/exec
+         * PASTE YOUR DEPLOYED URL HERE
          */
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxx_JQ3goYCrJJBxezdTetJbFsTpYek7vV0aFVzjefVrPM5oQxE-8L0RuGXCv-uMTEl/exec';
 
-        // DOM Elements
         const form = document.getElementById('transaction-form');
         const list = document.getElementById('transaction-list');
         const loader = document.getElementById('loading-overlay');
         const catSelect = document.getElementById('category');
-        const entryCount = document.getElementById('entry-count');
-        const emptyState = document.getElementById('empty-state');
         const toast = document.getElementById('toast');
 
-        // Internal State
         let state = { transactions: [], categories: [] };
 
         function showLoader(show) {
@@ -195,39 +107,27 @@
             loader.classList.toggle('pointer-events-none', !show);
         }
 
-        function init() {
-            document.getElementById('date').valueAsDate = new Date();
-            if (SCRIPT_URL.includes('PASTE_YOUR')) {
-                alert("Please add your Web App URL to the top of the <script> section in index.html!");
-                showLoader(false);
-                return;
-            }
-            refreshData();
-        }
-
         /**
-         * Generic Fetch Handler for Google Apps Script
+         * FIXED Connection Handler (JSONP method)
          */
-        async function scriptCall(action, payload = null) {
-            try {
-                const url = new URL(SCRIPT_URL);
-                url.searchParams.append('action', action);
-                
-                // If payload exists, we send it as a stringified JSON param (safest for GET/GAS)
-                if (payload) {
-                    url.searchParams.append('data', JSON.stringify(payload));
-                }
+        function scriptCall(action, payload = null) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'callback_' + Math.round(100000 * Math.random());
+                window[callbackName] = function(data) {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    if (data.error) reject(data.error);
+                    else resolve(data);
+                };
 
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Network response was not ok');
+                const script = document.createElement('script');
+                let url = SCRIPT_URL + '?action=' + action + '&callback=' + callbackName;
+                if (payload) url += '&data=' + encodeURIComponent(JSON.stringify(payload));
                 
-                const result = await response.json();
-                return result;
-            } catch (err) {
-                console.error("Script call error:", err);
-                showToast("Connection failed! Check console.", true);
-                throw err;
-            }
+                script.src = url;
+                script.onerror = () => reject('Network Error');
+                document.body.appendChild(script);
+            });
         }
 
         async function refreshData() {
@@ -235,81 +135,39 @@
             try {
                 state = await scriptCall('getData');
                 render();
-            } finally {
-                showLoader(false);
-            }
+            } catch(e) { console.error(e); }
+            finally { showLoader(false); }
         }
 
         function render() {
-            // Categories
-            const currentCat = catSelect.value;
-            catSelect.innerHTML = '<option value="General">General</option>';
-            state.categories.forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat;
-                opt.textContent = cat;
-                catSelect.appendChild(opt);
-            });
-            catSelect.value = currentCat || "General";
-
-            // Calculations
+            // Stats
             const income = state.transactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
             const bills = state.transactions.filter(t => t.type === 'bill').reduce((s, t) => s + Number(t.amount), 0);
-            const balance = income - bills;
-            
             document.getElementById('total-income').textContent = formatUSD(income);
             document.getElementById('total-bills').textContent = formatUSD(bills);
-            document.getElementById('net-balance').textContent = formatUSD(balance);
-            entryCount.textContent = `${state.transactions.length} record${state.transactions.length === 1 ? '' : 's'} on file`;
+            document.getElementById('net-balance').textContent = formatUSD(income - bills);
+            document.getElementById('entry-count').textContent = `${state.transactions.length} entries on file`;
 
-            // Balance Card Styling
-            const bCard = document.getElementById('balance-card');
-            const bIcon = document.getElementById('balance-icon-bg');
-            if (balance < 0) {
-                bCard.className = "glass-card p-6 rounded-3xl shadow-sm border-l-8 border-rose-500";
-                bIcon.className = "p-2 bg-rose-50 text-rose-600 rounded-xl";
-            } else {
-                bCard.className = "glass-card p-6 rounded-3xl shadow-sm border-l-8 border-indigo-500";
-                bIcon.className = "p-2 bg-indigo-50 text-indigo-600 rounded-xl";
-            }
+            // Categories
+            catSelect.innerHTML = '<option value="General">General</option>';
+            state.categories.forEach(c => catSelect.innerHTML += `<option value="${c}">${c}</option>`);
 
-            // Transaction List
+            // List
             list.innerHTML = '';
-            if (state.transactions.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            emptyState.classList.add('hidden');
-
-            const sorted = [...state.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            sorted.forEach(t => {
+            document.getElementById('empty-state').classList.toggle('hidden', state.transactions.length > 0);
+            [...state.transactions].reverse().forEach(t => {
                 const isIncome = t.type === 'income';
-                const li = document.createElement('li');
-                li.className = "group flex items-center justify-between p-6 md:p-8 hover:bg-slate-50 transition-all border-l-4 border-transparent hover:border-indigo-500";
-                li.innerHTML = `
-                    <div class="flex items-center gap-6">
-                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">
-                            ${isIncome ? 
-                                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>' : 
-                                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7 7 7-7"/><path d="M12 19V5"/></svg>'
-                            }
+                list.innerHTML += `
+                    <li class="flex items-center justify-between p-6 hover:bg-slate-50 transition-all">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">${isIncome ? '↑' : '↓'}</div>
+                            <div><p class="font-bold">${t.description}</p><p class="text-xs text-slate-400 font-bold uppercase">${t.category} • ${new Date(t.date).toLocaleDateString()}</p></div>
                         </div>
-                        <div>
-                            <p class="font-black text-slate-800 text-lg">${t.description}</p>
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">${t.category} • ${formatDate(t.date)}</p>
+                        <div class="flex items-center gap-6">
+                            <span class="font-black text-lg ${isIncome ? 'text-emerald-600' : 'text-rose-600'}">${isIncome ? '+' : '-'}${formatUSD(t.amount)}</span>
+                            <button onclick="handleDelete('${t.id}')" class="text-slate-300 hover:text-rose-600">✕</button>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-6">
-                        <span class="font-black text-xl tracking-tight ${isIncome ? 'text-emerald-600' : 'text-rose-600'}">
-                            ${isIncome ? '+' : '-'}${formatUSD(t.amount)}
-                        </span>
-                        <button onclick="handleDelete('${t.id}')" class="p-3 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                        </button>
-                    </div>
-                `;
-                list.appendChild(li);
+                    </li>`;
             });
         }
 
@@ -322,52 +180,36 @@
                 category: catSelect.value,
                 date: document.getElementById('date').value
             };
-
             showLoader(true);
-            try {
-                state = await scriptCall('addTransaction', payload);
-                render();
-                form.reset();
-                document.getElementById('date').valueAsDate = new Date();
-                showToast("Transaction synced!");
-            } finally {
-                showLoader(false);
-            }
+            state = await scriptCall('addTransaction', payload);
+            render();
+            form.reset();
+            document.getElementById('date').valueAsDate = new Date();
+            showLoader(false);
+            showToast("Synced!");
         };
 
         window.handleDelete = async (id) => {
-            if (!confirm('Permanently remove this entry?')) return;
+            if (!confirm('Remove entry?')) return;
             showLoader(true);
-            try {
-                state = await scriptCall('deleteTransaction', { id });
-                render();
-                showToast("Entry removed", true);
-            } finally {
-                showLoader(false);
-            }
+            state = await scriptCall('deleteTransaction', { id });
+            render();
+            showLoader(false);
         };
 
-        function showToast(msg, isError = false) {
-            const toastEl = document.getElementById('toast');
-            document.getElementById('toast-msg').textContent = msg;
-            toastEl.classList.remove('translate-y-32', 'opacity-0');
-            if (isError) toastEl.classList.add('bg-rose-600');
-            else toastEl.classList.remove('bg-rose-600');
-            
-            setTimeout(() => {
-                toastEl.classList.add('translate-y-32', 'opacity-0');
-            }, 3000);
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 2000);
         }
 
-        function formatUSD(val) {
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-        }
+        function formatUSD(val) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val); }
 
-        function formatDate(d) {
-            return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-        }
-
-        window.onload = init;
+        window.onload = () => {
+            document.getElementById('date').valueAsDate = new Date();
+            if(!SCRIPT_URL.includes('PASTE')) refreshData();
+            else alert("Set SCRIPT_URL first!");
+        };
     </script>
 </body>
 </html>
