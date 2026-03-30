@@ -4,46 +4,72 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wealth & Move Master</title>
+    <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
-    <!-- Use Lucide React specifically for React components -->
-    <script src="https://unpkg.com/lucide-react"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
-    <div id="root"></div>
+    <div id="root">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p class="text-slate-500 font-medium">Loading Wealth Master...</p>
+            </div>
+        </div>
+    </div>
 
-    <script type="text/javascript">
-        // --- PASTE YOUR GOOGLE WEB APP URL HERE ---
+    <!-- The actual App code using JSX (Babel) -->
+    <script type="text/babel">
+        // --- CONFIG ---
+        // Ensure this URL is correct and shared as "Anyone" in Google Apps Script
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxx_JQ3goYCrJJBxezdTetJbFsTpYek7vV0aFVzjefVrPM5oQxE-8L0RuGXCv-uMTEl/exec"; 
 
         const { useState, useEffect, useMemo, Fragment } = React;
         const { 
-            LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-            AreaChart, Area, PieChart, Pie, Cell 
+            AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+            PieChart, Pie, Cell
         } = Recharts;
-        
-        // Extracting icons from LucideReact global
-        const { 
-            LayoutDashboard, Receipt, Wallet, Calendar, TrendingUp, Landmark, 
-            Plus, Save, History, Trash2, Info, ArrowUpRight, AlertCircle
-        } = LucideReact;
 
-        function App() {
+        // Custom Icon Component to handle Lucide reliably
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const [svg, setSvg] = useState("");
+            useEffect(() => {
+                if (window.lucide) {
+                    const iconSvg = window.lucide.icons[name];
+                    if (iconSvg) setSvg(iconSvg);
+                }
+            }, [name]);
+            
+            return (
+                <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>
+            );
+        };
+
+        const App = () => {
             const [activeTab, setActiveTab] = useState('dashboard');
             const [expenses, setExpenses] = useState([]);
             const [loading, setLoading] = useState(true);
             const [isSaving, setIsSaving] = useState(false);
             const [newExpense, setNewExpense] = useState({ description: '', amount: '', category: 'Food' });
+            const [errorMessage, setErrorMessage] = useState(null);
+
+            // Run Lucide refresh whenever component updates
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            });
 
             const fetchData = async () => {
-                setLoading(true);
                 try {
                     if (typeof google !== 'undefined' && google.script) {
                         google.script.run.withSuccessHandler((data) => {
@@ -55,14 +81,10 @@
                         const data = await response.json();
                         setExpenses(data || []);
                         setLoading(false);
-                    } else {
-                        setExpenses([
-                            { Description: 'Example Expense', Amount: 15.00, Category: 'Food', Date: new Date().toLocaleDateString() }
-                        ]);
-                        setLoading(false);
                     }
                 } catch (e) {
                     console.error("Fetch error:", e);
+                    setErrorMessage("Connection Error: Check SCRIPT_URL and Permissions");
                     setLoading(false);
                 }
             };
@@ -72,29 +94,23 @@
             const handleAddExpense = async () => {
                 if (!newExpense.amount || isSaving) return;
                 setIsSaving(true);
-
                 try {
-                    if (typeof google !== 'undefined' && google.script) {
-                        google.script.run.withSuccessHandler((updatedData) => {
-                            setExpenses(updatedData || []);
-                            setNewExpense({ description: '', amount: '', category: 'Food' });
-                            setIsSaving(false);
-                        }).addExpense(newExpense.description, newExpense.amount, newExpense.category);
-                    } else if (SCRIPT_URL) {
-                        const params = new URLSearchParams({
-                            action: 'addExpense',
-                            description: newExpense.description,
-                            amount: newExpense.amount,
-                            category: newExpense.category
-                        });
-                        // GAS redirect requires 'no-cors' sometimes, but query params work best for GAS Web Apps
-                        await fetch(`${SCRIPT_URL}?${params.toString()}`, { method: 'POST', mode: 'no-cors' });
-                        setTimeout(fetchData, 1500); // Buffer for GAS processing
-                        setNewExpense({ description: '', amount: '', category: 'Food' });
-                        setIsSaving(false);
-                    }
+                    const params = new URLSearchParams({
+                        action: 'addExpense',
+                        description: newExpense.description,
+                        amount: newExpense.amount,
+                        category: newExpense.category
+                    });
+                    
+                    // POST with no-cors for Google Apps Script redirects
+                    await fetch(`${SCRIPT_URL}?${params.toString()}`, { method: 'POST', mode: 'no-cors' });
+                    
+                    // Refresh data after a short delay
+                    setTimeout(fetchData, 1500);
+                    setNewExpense({ description: '', amount: '', category: 'Food' });
                 } catch (e) {
                     console.error("Save error:", e);
+                } finally {
                     setIsSaving(false);
                 }
             };
@@ -109,181 +125,167 @@
             const lifestyleLimit = 320;
             const lifestyleRemaining = Math.max(0, lifestyleLimit - totalSpent);
 
-            const NavButton = ({ id, label, icon: Icon }) => (
-                <button
-                    onClick={() => setActiveTab(id)}
-                    className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl transition-all ${activeTab === id ? 'text-blue-600 bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                    <Icon size={20} />
-                    <span className="text-[10px] font-bold uppercase tracking-tight">{label}</span>
-                </button>
+            if (errorMessage) {
+                return (
+                    <div className="flex items-center justify-center min-h-screen p-6">
+                        <div className="bg-red-50 p-6 rounded-2xl border border-red-200 text-center max-w-sm">
+                            <div className="text-red-500 mb-2 font-bold">Error Occurred</div>
+                            <p className="text-red-700 text-sm mb-4">{errorMessage}</p>
+                            <button onClick={() => window.location.reload()} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Retry Connection</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen pb-24 animate-fade-in">
+                    <header className="bg-white p-4 border-b sticky top-0 z-20 flex justify-between items-center shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-blue-600 p-2 rounded-lg text-white">
+                                <i data-lucide="landmark" className="w-5 h-5"></i>
+                            </div>
+                            <h1 className="font-black text-slate-900 tracking-tighter text-lg">WEALTH MASTER</h1>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase leading-none">Total Savings</p>
+                            <p className="text-lg font-black text-blue-600 leading-none mt-1">$500.00</p>
+                        </div>
+                    </header>
+
+                    <main className="p-4 max-w-4xl mx-auto space-y-6">
+                        {activeTab === 'dashboard' && (
+                            <Fragment>
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                    <h2 className="font-bold text-slate-800 mb-6 flex items-center justify-between">
+                                        Move-In Trajectory
+                                        <span className="text-xs font-normal text-slate-400 uppercase tracking-widest">Sept Target</span>
+                                    </h2>
+                                    <div className="h-64">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={chartData}>
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                                                <YAxis hide />
+                                                <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
+                                                <Area type="monotone" dataKey="amount" stroke="#2563eb" strokeWidth={4} fill="rgba(37, 99, 235, 0.05)" />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-blue-600 p-6 rounded-3xl text-white shadow-xl shadow-blue-100 h-36 flex flex-col justify-between">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">Target Goal</p>
+                                        <div>
+                                            <p className="text-3xl font-black">$7,000</p>
+                                            <p className="text-[10px] font-bold opacity-80 mt-1 uppercase">Ready for NACA</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-900 p-6 rounded-3xl text-white shadow-xl h-36 flex flex-col justify-between">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">Daily Buffer</p>
+                                        <div>
+                                            <p className="text-3xl font-black">${lifestyleRemaining.toFixed(0)}</p>
+                                            <p className="text-[10px] font-bold opacity-80 mt-1 uppercase">Lifestyle Fund</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Fragment>
+                        )}
+
+                        {activeTab === 'daily' && (
+                            <div className="space-y-6">
+                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                                    <h3 className="font-bold mb-4 flex items-center gap-2">
+                                        <i data-lucide="plus" className="text-blue-600 w-5 h-5"></i>
+                                        Quick Log Expense
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <input 
+                                            placeholder="Description" 
+                                            className="w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 ring-blue-100"
+                                            value={newExpense.description}
+                                            onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                                        />
+                                        <div className="flex gap-3">
+                                            <input 
+                                                type="number" 
+                                                placeholder="0.00" 
+                                                className="flex-1 p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 ring-blue-100"
+                                                value={newExpense.amount}
+                                                onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                                            />
+                                            <select 
+                                                className="p-4 bg-slate-50 border rounded-2xl outline-none font-bold"
+                                                value={newExpense.category}
+                                                onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
+                                            >
+                                                {['Food', 'Gas', 'Bills', 'Misc'].map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        </div>
+                                        <button 
+                                            onClick={handleAddExpense}
+                                            disabled={isSaving || !newExpense.amount}
+                                            className={`w-full ${isSaving ? 'bg-slate-400' : 'bg-blue-600'} text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100`}
+                                        >
+                                            {isSaving ? 'SYNCING...' : 'SAVE TO SHEET'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                                    <div className="p-4 bg-slate-50 border-b flex justify-between items-center">
+                                        <span className="font-black text-xs text-slate-500 uppercase tracking-widest">Expense History</span>
+                                        {loading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>}
+                                    </div>
+                                    <div className="divide-y">
+                                        {expenses.length === 0 ? (
+                                            <p className="p-12 text-center text-slate-400 italic">History is empty.</p>
+                                        ) : (
+                                            expenses.map((exp, i) => (
+                                                <div key={i} className="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                                                    <div>
+                                                        <p className="font-bold text-slate-800">{exp.Description || exp.description}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">{exp.Date || 'Recent'} • {exp.Category || 'Other'}</p>
+                                                    </div>
+                                                    <span className="font-black text-slate-900">-${Number(exp.Amount || 0).toFixed(2)}</span>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {(activeTab === 'biweekly' || activeTab === 'monthly') && (
+                            <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm text-center py-20">
+                                <i data-lucide="shield-check" className="w-12 h-12 text-blue-600 mx-auto mb-4"></i>
+                                <h3 className="font-bold text-xl">50/30/20 Plan Active</h3>
+                                <p className="text-slate-500 max-w-xs mx-auto mt-2">You are following the $1,600 bi-weekly wealth builder plan.</p>
+                            </div>
+                        )}
+                    </main>
+
+                    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t p-2 flex gap-1 z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+                        {[
+                            { id: 'dashboard', label: 'Home', icon: 'layout-dashboard' },
+                            { id: 'daily', label: 'Logs', icon: 'receipt' },
+                            { id: 'biweekly', label: 'Budget', icon: 'wallet' },
+                            { id: 'monthly', label: 'Growth', icon: 'calendar' }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl transition-all ${activeTab === tab.id ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}
+                            >
+                                <i data-lucide={tab.icon} className="w-5 h-5"></i>
+                                <span className="text-[10px] font-bold uppercase tracking-tighter">{tab.label}</span>
+                            </button>
+                        ))}
+                    </nav>
+                </div>
             );
-
-            return React.createElement('div', { className: 'min-h-screen pb-24 bg-slate-50' }, 
-                React.createElement('header', { className: 'bg-white p-4 border-b sticky top-0 z-20 flex justify-between items-center shadow-sm' },
-                    React.createElement('div', { className: 'flex items-center gap-2' },
-                        React.createElement('div', { className: 'bg-blue-600 p-2 rounded-lg text-white' }, React.createElement(Landmark, { size: 18 })),
-                        React.createElement('h1', { className: 'font-black text-slate-900 tracking-tighter text-lg' }, 'WEALTH MASTER')
-                    ),
-                    React.createElement('div', { className: 'text-right' }, 
-                        React.createElement('p', { className: 'text-[10px] font-bold text-slate-400 uppercase leading-none' }, 'Total Savings'),
-                        React.createElement('p', { className: 'text-lg font-black text-blue-600 leading-none mt-1' }, '$500.00')
-                    )
-                ),
-
-                React.createElement('main', { className: 'p-4 max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500' },
-                    
-                    activeTab === 'dashboard' && React.createElement(Fragment, null,
-                        React.createElement('div', { className: 'bg-white p-6 rounded-2xl shadow-sm border border-slate-200' },
-                            React.createElement('h2', { className: 'font-bold text-slate-800 mb-6 flex items-center justify-between' }, 
-                                'Move-In Trajectory',
-                                React.createElement('span', { className: 'text-xs font-normal text-slate-400 uppercase tracking-widest' }, '6 Month View')
-                            ),
-                            React.createElement('div', { className: 'h-64' },
-                                React.createElement(ResponsiveContainer, { width: '100%', height: '100%' },
-                                    React.createElement(AreaChart, { data: chartData },
-                                        React.createElement(XAxis, { dataKey: 'name', axisLine: false, tickLine: false, tick: {fill: '#94a3b8', fontSize: 12} }),
-                                        React.createElement(YAxis, { hide: true }),
-                                        React.createElement(Tooltip, { 
-                                            contentStyle: {borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'},
-                                            formatter: (val) => [`$${val.toLocaleString()}`, 'Projected']
-                                        }),
-                                        React.createElement(Area, { 
-                                            type: 'monotone', 
-                                            dataKey: 'amount', 
-                                            stroke: '#2563eb', 
-                                            strokeWidth: 4, 
-                                            fill: 'rgba(37, 99, 235, 0.05)' 
-                                        })
-                                    )
-                                )
-                            )
-                        ),
-                        React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
-                            React.createElement('div', { className: 'bg-blue-600 p-6 rounded-2xl text-white shadow-xl shadow-blue-100 flex flex-col justify-between h-32' },
-                                React.createElement('p', { className: 'text-[10px] opacity-70 uppercase font-bold tracking-widest' }, 'Sept Target'),
-                                React.createElement('div', null,
-                                    React.createElement('p', { className: 'text-2xl font-black' }, '$7,000'),
-                                    React.createElement('p', { className: 'text-[10px] opacity-80 mt-1' }, 'Ready for NACA')
-                                )
-                            ),
-                            React.createElement('div', { className: 'bg-slate-900 p-6 rounded-2xl text-white shadow-xl shadow-slate-200 flex flex-col justify-between h-32' },
-                                React.createElement('p', { className: 'text-[10px] opacity-70 uppercase font-bold tracking-widest' }, 'Daily Buffer'),
-                                React.createElement('div', null,
-                                    React.createElement('p', { className: 'text-2xl font-black' }, `$${lifestyleRemaining.toFixed(0)}`),
-                                    React.createElement('p', { className: 'text-[10px] opacity-80 mt-1' }, 'Lifestyle Remaining')
-                                )
-                            )
-                        )
-                    ),
-
-                    activeTab === 'daily' && React.createElement('div', { className: 'space-y-6 animate-in slide-in-from-bottom-2' },
-                        React.createElement('div', { className: 'bg-white p-6 rounded-2xl border border-slate-200 shadow-sm' },
-                            React.createElement('h3', { className: 'font-bold mb-4 flex items-center gap-2' }, 
-                                React.createElement(Plus, { size: 18, className: 'text-blue-600' }), 
-                                'Quick Log'
-                            ),
-                            React.createElement('div', { className: 'space-y-4' },
-                                React.createElement('input', { 
-                                    placeholder: 'Description (e.g. Exxon Gas)', 
-                                    className: 'w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20 transition-all',
-                                    value: newExpense.description,
-                                    onChange: (e) => setNewExpense({...newExpense, description: e.target.value})
-                                }),
-                                React.createElement('div', { className: 'flex gap-3' },
-                                    React.createElement('input', { 
-                                        type: 'number', 
-                                        placeholder: '0.00', 
-                                        className: 'flex-1 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20 transition-all',
-                                        value: newExpense.amount,
-                                        onChange: (e) => setNewExpense({...newExpense, amount: e.target.value})
-                                    }),
-                                    React.createElement('select', { 
-                                        className: 'p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-600',
-                                        value: newExpense.category,
-                                        onChange: (e) => setNewExpense({...newExpense, category: e.target.value})
-                                    },
-                                        ['Food', 'Gas', 'Bills', 'Misc'].map(c => React.createElement('option', { key: c, value: c }, c))
-                                    )
-                                ),
-                                React.createElement('button', { 
-                                    onClick: handleAddExpense,
-                                    disabled: isSaving || !newExpense.amount,
-                                    className: `w-full ${isSaving ? 'bg-slate-400' : 'bg-blue-600'} text-white font-black py-4 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100` 
-                                }, isSaving ? 'PROCESSING...' : 'SAVE TO SHEET')
-                            )
-                        ),
-                        React.createElement('div', { className: 'bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden' },
-                            React.createElement('div', { className: 'p-4 border-b bg-slate-50 flex justify-between items-center' },
-                                React.createElement('span', { className: 'font-black text-slate-700 text-xs uppercase tracking-widest' }, 'History'),
-                                loading && React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600' })
-                            ),
-                            expenses.length === 0 ? React.createElement('p', { className: 'p-12 text-center text-slate-400 italic' }, 'No expenses found.') :
-                            expenses.map((exp, i) => React.createElement('div', { key: i, className: 'p-4 flex justify-between border-b last:border-0 hover:bg-slate-50 transition-colors' },
-                                React.createElement('div', null,
-                                    React.createElement('p', { className: 'font-bold text-slate-800' }, exp.Description || exp.description),
-                                    React.createElement('p', { className: 'text-[10px] text-slate-400 uppercase font-bold tracking-tight mt-0.5' }, 
-                                        `${exp.Date || 'Recent'} • ${exp.Category || exp.category || 'Other'}`
-                                    )
-                                ),
-                                React.createElement('span', { className: 'font-black text-slate-900' }, `-$${Number(exp.Amount || exp.amount).toFixed(2)}`)
-                            ))
-                        )
-                    ),
-
-                    activeTab === 'biweekly' && React.createElement('div', { className: 'bg-white p-8 rounded-2xl border border-slate-200 shadow-sm' },
-                        React.createElement('h2', { className: 'text-2xl font-black mb-8 border-b pb-4' }, 'BI-WEEKLY 50/30/20'),
-                        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-6' },
-                            [
-                                { title: 'Essentials', color: 'blue', val: 800 },
-                                { title: 'Wealth', color: 'emerald', val: 480 },
-                                { title: 'Lifestyle', color: 'amber', val: 320 }
-                            ].map(item => React.createElement('div', { key: item.title, className: `p-6 rounded-2xl bg-${item.color}-50 border border-${item.color}-100` },
-                                React.createElement('p', { className: `text-[10px] font-bold text-${item.color}-600 uppercase` }, item.title),
-                                React.createElement('p', { className: 'text-2xl font-black' }, `$${item.val}`),
-                                React.createElement('div', { className: `w-full h-1 bg-${item.color}-200 mt-4 rounded-full overflow-hidden` },
-                                    React.createElement('div', { className: `h-full bg-${item.color}-500`, style: {width: '100%'} })
-                                )
-                            ))
-                        )
-                    ),
-
-                    activeTab === 'monthly' && React.createElement('div', { className: 'bg-white p-8 rounded-2xl border border-slate-200 shadow-sm' },
-                        React.createElement('h2', { className: 'text-2xl font-black mb-6' }, 'MONTHLY GROWTH'),
-                        React.createElement('div', { className: 'space-y-6' },
-                            React.createElement('div', { className: 'p-6 bg-slate-900 text-white rounded-2xl' },
-                                React.createElement('p', { className: 'text-xs text-slate-400 font-bold' }, 'Total Monthly Income'),
-                                React.createElement('p', { className: 'text-3xl font-black' }, '$3,200.00'),
-                                React.createElement('p', { className: 'text-xs text-blue-400 mt-2 flex items-center gap-1' }, 
-                                    React.createElement(ArrowUpRight, { size: 14 }), 'Healthy Cashflow'
-                                )
-                            ),
-                            React.createElement('div', { className: 'p-6 border rounded-2xl' },
-                                React.createElement('h4', { className: 'font-bold mb-4' }, 'Post-Move Projections'),
-                                React.createElement('div', { className: 'space-y-3' },
-                                    [['Rent/Housing', '$1,300'], ['Auto/Tech', '$425'], ['Wealth', '$710'], ['Lifestyle', '$765']].map(([lbl, val]) => 
-                                        React.createElement('div', { key: lbl, className: 'flex justify-between text-sm' },
-                                            React.createElement('span', { className: 'text-slate-500' }, lbl),
-                                            React.createElement('span', { className: 'font-bold' }, val)
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                ),
-
-                React.createElement('nav', { className: 'fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-2 flex gap-1 z-30 shadow-[0_-1px_10px_rgba(0,0,0,0.05)]' },
-                    React.createElement(NavButton, { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }),
-                    React.createElement(NavButton, { id: 'daily', label: 'Logs', icon: Receipt }),
-                    React.createElement(NavButton, { id: 'biweekly', label: 'Budget', icon: Wallet }),
-                    React.createElement(NavButton, { id: 'monthly', label: 'Growth', icon: Calendar })
-                )
-            );
-        }
+        };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(App));
+        root.render(<App />);
     </script>
 </body>
 </html>
