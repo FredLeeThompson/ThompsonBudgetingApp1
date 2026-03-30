@@ -3,309 +3,371 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wealth & Move Master</title>
-    <!-- Dependencies -->
+    <title>FinanceFlow | Thompson Budgeting</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        .loader { border-top-color: #6366f1; animation: spinner 0.8s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.98); 
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(226, 232, 240, 0.8); 
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
-    <div id="root">
-        <div class="flex items-center justify-center min-h-screen">
-            <div class="text-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p class="text-slate-500 font-medium">Opening Wealth Master...</p>
+<body class="bg-slate-50 min-h-screen text-slate-900 pb-12">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white/90 z-50 flex flex-col items-center justify-center transition-all duration-300">
+        <div class="loader rounded-full border-4 border-slate-200 h-14 w-14 mb-4"></div>
+        <p class="text-indigo-600 font-bold tracking-wide animate-pulse uppercase">Connecting to Google Script...</p>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 py-6 md:py-10">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Thompson Budgeting</h1>
+                <p class="text-slate-500 font-medium tracking-tight">External Sheet Integration</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="refreshData()" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Refresh Data">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                </button>
+                <div class="h-8 w-[1px] bg-slate-200 hidden md:block"></div>
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-full border border-indigo-100">
+                    <span class="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
+                    <span class="text-[10px] font-black text-indigo-700 uppercase tracking-widest">External Link</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="glass-card p-6 rounded-3xl shadow-sm border-l-8 border-emerald-500">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-black uppercase tracking-widest text-slate-400">Monthly Income</span>
+                    <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                    </div>
+                </div>
+                <h2 id="total-income" class="text-3xl font-black text-slate-800 tracking-tight">$0.00</h2>
+            </div>
+
+            <div class="glass-card p-6 rounded-3xl shadow-sm border-l-8 border-rose-500">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-black uppercase tracking-widest text-slate-400">Total Bills</span>
+                    <div class="p-2 bg-rose-50 text-rose-600 rounded-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7 7 7-7"/><path d="M12 19V5"/></svg>
+                    </div>
+                </div>
+                <h2 id="total-bills" class="text-3xl font-black text-slate-800 tracking-tight">$0.00</h2>
+            </div>
+
+            <div id="balance-card" class="glass-card p-6 rounded-3xl shadow-sm border-l-8 border-indigo-500 transition-all duration-500">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-black uppercase tracking-widest text-slate-400">Net Remaining</span>
+                    <div id="balance-icon-bg" class="p-2 bg-indigo-50 text-indigo-600 rounded-xl transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m17 5-5-3-5 3"/><path d="m17 19-5 3-5-3"/><rect width="12" height="12" x="6" y="6" rx="2"/></svg>
+                    </div>
+                </div>
+                <h2 id="net-balance" class="text-3xl font-black text-slate-800 tracking-tight">$0.00</h2>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <!-- Entry Form -->
+            <div class="lg:col-span-4">
+                <div class="glass-card p-8 rounded-3xl shadow-lg sticky top-6">
+                    <h3 class="text-xl font-black mb-8 flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center text-sm">+</span>
+                        Log Transaction
+                    </h3>
+                    
+                    <form id="transaction-form" class="space-y-6">
+                        <div class="space-y-3">
+                            <label class="block text-[11px] font-black uppercase tracking-widest text-slate-500">Type</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="cursor-pointer group">
+                                    <input type="radio" name="type" value="income" class="peer sr-only" checked>
+                                    <div class="py-3 text-center rounded-2xl border-2 border-slate-100 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 font-bold text-sm transition-all group-hover:bg-slate-50">
+                                        Income
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer group">
+                                    <input type="radio" name="type" value="bill" class="peer sr-only">
+                                    <div class="py-3 text-center rounded-2xl border-2 border-slate-100 peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:text-rose-700 font-bold text-sm transition-all group-hover:bg-slate-50">
+                                        Bill
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="block text-[11px] font-black uppercase tracking-widest text-slate-500">Details</label>
+                            <input type="text" id="description" required placeholder="e.g., Turo Booking" 
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm font-medium">
+                            <div class="relative">
+                                <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                                <input type="number" id="amount" required step="0.01" min="0" placeholder="0.00" 
+                                    class="w-full pl-10 pr-5 py-4 rounded-2xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm font-medium">
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="block text-[11px] font-black uppercase tracking-widest text-slate-500">Metadata</label>
+                            <select id="category" class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm font-medium appearance-none">
+                                <option value="General">General</option>
+                            </select>
+                            <input type="date" id="date" required 
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm font-medium">
+                        </div>
+
+                        <button type="submit" class="w-full bg-slate-900 text-white font-black py-5 rounded-2xl hover:bg-indigo-600 shadow-xl shadow-indigo-200 transition-all transform active:scale-[0.98]">
+                            Sync to Spreadsheet
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Ledger Area -->
+            <div class="lg:col-span-8">
+                <div class="glass-card rounded-3xl shadow-sm overflow-hidden flex flex-col">
+                    <div class="p-6 md:p-8 border-b border-slate-100 flex items-center justify-between bg-white/50">
+                        <div>
+                            <h3 class="text-xl font-black">Transaction Ledger</h3>
+                            <p id="entry-count" class="text-sm text-slate-400 font-medium">Loading entries...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="custom-scrollbar overflow-y-auto max-h-[700px] min-h-[400px]">
+                        <ul id="transaction-list" class="divide-y divide-slate-50">
+                            <!-- Transactions injected here -->
+                        </ul>
+                        <!-- Empty/Loading States -->
+                        <div id="empty-state" class="hidden flex flex-col items-center justify-center py-32 text-slate-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mb-6 opacity-20"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" x2="12" y1="18" y2="12"/><line x1="9" x2="15" y1="15" y2="15"/></svg>
+                            <p class="text-lg font-bold">No Records Found</p>
+                            <p class="text-sm">Log your first income or bill to see it here.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- The actual App code using JSX (Babel) -->
-    <script type="text/babel">
-        // --- CONFIG ---
-        // Replace with your actual Google Apps Script Web App URL
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxx_JQ3goYCrJJBxezdTetJbFsTpYek7vV0aFVzjefVrPM5oQxE-8L0RuGXCv-uMTEl/exec"; 
+    <!-- Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-8 py-4 rounded-2xl shadow-2xl transform translate-y-32 opacity-0 transition-all duration-500 z-50 flex items-center gap-3 font-bold">
+        <div class="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
+        <span id="toast-msg">Entry Saved Successfully!</span>
+    </div>
 
-        const { useState, useEffect, useMemo, Fragment } = React;
-        const { 
-            AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
-        } = Recharts;
+    <script>
+        /**
+         * PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
+         * It should look like: https://script.google.com/macros/s/ABC...XYZ/exec
+         */
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxx_JQ3goYCrJJBxezdTetJbFsTpYek7vV0aFVzjefVrPM5oQxE-8L0RuGXCv-uMTEl/exec';
 
-        const App = () => {
-            const [activeTab, setActiveTab] = useState('dashboard');
-            const [expenses, setExpenses] = useState([]);
-            const [loading, setLoading] = useState(true);
-            const [isSaving, setIsSaving] = useState(false);
-            const [newExpense, setNewExpense] = useState({ description: '', amount: '', category: 'Food' });
-            const [errorMessage, setErrorMessage] = useState(null);
+        // DOM Elements
+        const form = document.getElementById('transaction-form');
+        const list = document.getElementById('transaction-list');
+        const loader = document.getElementById('loading-overlay');
+        const catSelect = document.getElementById('category');
+        const entryCount = document.getElementById('entry-count');
+        const emptyState = document.getElementById('empty-state');
+        const toast = document.getElementById('toast');
 
-            // Refresh Lucide icons after every render
-            useEffect(() => {
-                if (window.lucide) {
-                    window.lucide.createIcons();
+        // Internal State
+        let state = { transactions: [], categories: [] };
+
+        function showLoader(show) {
+            loader.classList.toggle('opacity-0', !show);
+            loader.classList.toggle('pointer-events-none', !show);
+        }
+
+        function init() {
+            document.getElementById('date').valueAsDate = new Date();
+            if (SCRIPT_URL.includes('PASTE_YOUR')) {
+                alert("Please add your Web App URL to the top of the <script> section in index.html!");
+                showLoader(false);
+                return;
+            }
+            refreshData();
+        }
+
+        /**
+         * Generic Fetch Handler for Google Apps Script
+         */
+        async function scriptCall(action, payload = null) {
+            try {
+                const url = new URL(SCRIPT_URL);
+                url.searchParams.append('action', action);
+                
+                // If payload exists, we send it as a stringified JSON param (safest for GET/GAS)
+                if (payload) {
+                    url.searchParams.append('data', JSON.stringify(payload));
                 }
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const result = await response.json();
+                return result;
+            } catch (err) {
+                console.error("Script call error:", err);
+                showToast("Connection failed! Check console.", true);
+                throw err;
+            }
+        }
+
+        async function refreshData() {
+            showLoader(true);
+            try {
+                state = await scriptCall('getData');
+                render();
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        function render() {
+            // Categories
+            const currentCat = catSelect.value;
+            catSelect.innerHTML = '<option value="General">General</option>';
+            state.categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                catSelect.appendChild(opt);
             });
+            catSelect.value = currentCat || "General";
 
-            const fetchData = async () => {
-                try {
-                    setLoading(true);
-                    if (typeof google !== 'undefined' && google.script) {
-                        // Running inside Google Apps Script environment
-                        google.script.run.withSuccessHandler((data) => {
-                            setExpenses(data || []);
-                            setLoading(false);
-                        }).getExpenses();
-                    } else if (SCRIPT_URL && SCRIPT_URL.length > 10) {
-                        // Running externally (GitHub/Cloudflare)
-                        const response = await fetch(`${SCRIPT_URL}?action=getExpenses`);
-                        if (!response.ok) throw new Error("Sheet connection failed");
-                        const data = await response.json();
-                        setExpenses(data || []);
-                        setLoading(false);
-                    } else {
-                        // Fallback mock data if no URL is provided
-                        console.warn("No SCRIPT_URL provided. Showing demo data.");
-                        setExpenses([
-                            { Description: 'Rent Deposit', Amount: 500, Category: 'Bills', Date: '3/30/2026' },
-                            { Description: 'Gym Membership', Amount: 35, Category: 'Misc', Date: '3/28/2026' }
-                        ]);
-                        setLoading(false);
-                    }
-                } catch (e) {
-                    console.error("Fetch error:", e);
-                    setErrorMessage("Unable to connect to Google Sheets. Verify your SCRIPT_URL and check if it is shared with 'Anyone'.");
-                    setLoading(false);
-                }
-            };
+            // Calculations
+            const income = state.transactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+            const bills = state.transactions.filter(t => t.type === 'bill').reduce((s, t) => s + Number(t.amount), 0);
+            const balance = income - bills;
+            
+            document.getElementById('total-income').textContent = formatUSD(income);
+            document.getElementById('total-bills').textContent = formatUSD(bills);
+            document.getElementById('net-balance').textContent = formatUSD(balance);
+            entryCount.textContent = `${state.transactions.length} record${state.transactions.length === 1 ? '' : 's'} on file`;
 
-            useEffect(() => { fetchData(); }, []);
-
-            const handleAddExpense = async () => {
-                if (!newExpense.amount || isSaving) return;
-                setIsSaving(true);
-                try {
-                    const params = new URLSearchParams({
-                        action: 'addExpense',
-                        description: newExpense.description,
-                        amount: newExpense.amount,
-                        category: newExpense.category
-                    });
-                    
-                    if (typeof google !== 'undefined' && google.script) {
-                        google.script.run.withSuccessHandler((updatedData) => {
-                            setExpenses(updatedData || []);
-                            setNewExpense({ description: '', amount: '', category: 'Food' });
-                            setIsSaving(false);
-                        }).addExpense(newExpense.description, newExpense.amount, newExpense.category);
-                    } else {
-                        // External POST
-                        await fetch(`${SCRIPT_URL}?${params.toString()}`, { method: 'POST', mode: 'no-cors' });
-                        setTimeout(fetchData, 1200); // Wait for GAS to update
-                        setNewExpense({ description: '', amount: '', category: 'Food' });
-                        setIsSaving(false);
-                    }
-                } catch (e) {
-                    console.error("Save error:", e);
-                    setIsSaving(false);
-                }
-            };
-
-            const chartData = [
-                { name: 'Apr', amount: 1038 }, { name: 'May', amount: 2115 },
-                { name: 'Jun', amount: 3192 }, { name: 'Jul', amount: 4269 },
-                { name: 'Aug', amount: 5346 }, { name: 'Sep', amount: 7007 }
-            ];
-
-            const totalSpent = expenses.reduce((sum, e) => sum + Number(e.Amount || 0), 0);
-            const lifestyleLimit = 320;
-            const lifestyleRemaining = Math.max(0, lifestyleLimit - totalSpent);
-
-            if (errorMessage) {
-                return (
-                    <div className="flex items-center justify-center min-h-screen p-6 bg-slate-50">
-                        <div className="bg-white p-8 rounded-3xl border border-red-100 text-center shadow-xl max-w-sm">
-                            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i data-lucide="alert-circle" className="w-8 h-8"></i>
-                            </div>
-                            <h3 className="font-bold text-slate-900 text-lg mb-2">Connection Issue</h3>
-                            <p className="text-slate-500 text-sm mb-6 leading-relaxed">{errorMessage}</p>
-                            <button onClick={() => window.location.reload()} className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl">Try Again</button>
-                        </div>
-                    </div>
-                );
+            // Balance Card Styling
+            const bCard = document.getElementById('balance-card');
+            const bIcon = document.getElementById('balance-icon-bg');
+            if (balance < 0) {
+                bCard.className = "glass-card p-6 rounded-3xl shadow-sm border-l-8 border-rose-500";
+                bIcon.className = "p-2 bg-rose-50 text-rose-600 rounded-xl";
+            } else {
+                bCard.className = "glass-card p-6 rounded-3xl shadow-sm border-l-8 border-indigo-500";
+                bIcon.className = "p-2 bg-indigo-50 text-indigo-600 rounded-xl";
             }
 
-            return (
-                <div className="min-h-screen pb-24 animate-fade-in flex flex-col">
-                    <header className="bg-white p-4 border-b sticky top-0 z-20 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <div className="bg-blue-600 p-2 rounded-xl text-white">
-                                <i data-lucide="landmark" className="w-5 h-5"></i>
-                            </div>
-                            <h1 className="font-black text-slate-900 tracking-tighter text-lg">WEALTH MASTER</h1>
+            // Transaction List
+            list.innerHTML = '';
+            if (state.transactions.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            const sorted = [...state.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sorted.forEach(t => {
+                const isIncome = t.type === 'income';
+                const li = document.createElement('li');
+                li.className = "group flex items-center justify-between p-6 md:p-8 hover:bg-slate-50 transition-all border-l-4 border-transparent hover:border-indigo-500";
+                li.innerHTML = `
+                    <div class="flex items-center gap-6">
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">
+                            ${isIncome ? 
+                                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>' : 
+                                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7 7 7-7"/><path d="M12 19V5"/></svg>'
+                            }
                         </div>
-                        <div className="text-right">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Total Savings</p>
-                            <p className="text-lg font-black text-blue-600 leading-none mt-1">$500.00</p>
+                        <div>
+                            <p class="font-black text-slate-800 text-lg">${t.description}</p>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">${t.category} • ${formatDate(t.date)}</p>
                         </div>
-                    </header>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <span class="font-black text-xl tracking-tight ${isIncome ? 'text-emerald-600' : 'text-rose-600'}">
+                            ${isIncome ? '+' : '-'}${formatUSD(t.amount)}
+                        </span>
+                        <button onclick="handleDelete('${t.id}')" class="p-3 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
 
-                    <main className="flex-1 p-4 max-w-4xl mx-auto w-full space-y-6">
-                        {activeTab === 'dashboard' && (
-                            <Fragment>
-                                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-                                    <h2 className="font-bold text-slate-800 mb-6 flex items-center justify-between">
-                                        Move-In Trajectory
-                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full uppercase tracking-widest">Sept Target</span>
-                                    </h2>
-                                    <div className="h-64">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={chartData}>
-                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                                                <YAxis hide />
-                                                <Tooltip 
-                                                    contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
-                                                    cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }}
-                                                />
-                                                <Area type="monotone" dataKey="amount" stroke="#2563eb" strokeWidth={4} fill="rgba(37, 99, 235, 0.05)" />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="bg-blue-600 p-6 rounded-[2.5rem] text-white shadow-xl shadow-blue-100 h-40 flex flex-col justify-between">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">Savings Goal</p>
-                                        <div>
-                                            <p className="text-4xl font-black tracking-tighter">$7,000</p>
-                                            <p className="text-[10px] font-bold opacity-80 mt-1 uppercase tracking-wider">Ready for NACA</p>
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-900 p-6 rounded-[2.5rem] text-white shadow-xl h-40 flex flex-col justify-between">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">Lifestyle Buffer</p>
-                                        <div>
-                                            <p className="text-4xl font-black tracking-tighter">${lifestyleRemaining.toFixed(0)}</p>
-                                            <p className="text-[10px] font-bold opacity-80 mt-1 uppercase tracking-wider">Remaining this period</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Fragment>
-                        )}
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const payload = {
+                type: form.querySelector('input[name="type"]:checked').value,
+                description: document.getElementById('description').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                category: catSelect.value,
+                date: document.getElementById('date').value
+            };
 
-                        {activeTab === 'daily' && (
-                            <div className="space-y-6 animate-fade-in">
-                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                                    <h3 className="font-bold mb-4 flex items-center gap-2">
-                                        <i data-lucide="plus-circle" className="text-blue-600 w-5 h-5"></i>
-                                        Log New Expense
-                                    </h3>
-                                    <div className="space-y-4">
-                                        <input 
-                                            placeholder="Where did you spend?" 
-                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 ring-blue-500/10 transition-all font-medium"
-                                            value={newExpense.description}
-                                            onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
-                                        />
-                                        <div className="flex gap-3">
-                                            <input 
-                                                type="number" 
-                                                placeholder="0.00" 
-                                                className="flex-1 p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 ring-blue-500/10 transition-all font-bold text-lg"
-                                                value={newExpense.amount}
-                                                onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                                            />
-                                            <select 
-                                                className="p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-slate-600 cursor-pointer"
-                                                value={newExpense.category}
-                                                onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
-                                            >
-                                                {['Food', 'Gas', 'Bills', 'Misc'].map(c => <option key={c} value={c}>{c}</option>)}
-                                            </select>
-                                        </div>
-                                        <button 
-                                            onClick={handleAddExpense}
-                                            disabled={isSaving || !newExpense.amount}
-                                            className={`w-full ${isSaving ? 'bg-slate-300' : 'bg-blue-600'} text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 uppercase tracking-widest`}
-                                        >
-                                            {isSaving ? 'Syncing...' : 'Save Transaction'}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                                    <div className="p-5 bg-slate-50 border-b flex justify-between items-center">
-                                        <span className="font-black text-[10px] text-slate-500 uppercase tracking-[0.2em]">Expense History</span>
-                                        {loading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>}
-                                    </div>
-                                    <div className="divide-y divide-slate-50 max-h-[500px] overflow-y-auto">
-                                        {expenses.length === 0 && !loading ? (
-                                            <div className="p-16 text-center">
-                                                <i data-lucide="inbox" className="w-10 h-10 text-slate-200 mx-auto mb-3"></i>
-                                                <p className="text-slate-400 text-sm italic">No history found.</p>
-                                            </div>
-                                        ) : (
-                                            expenses.map((exp, i) => (
-                                                <div key={i} className="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors">
-                                                    <div>
-                                                        <p className="font-bold text-slate-800">{exp.Description || exp.description}</p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5 tracking-tight">
-                                                            {exp.Date || 'Recently'} • {exp.Category || 'General'}
-                                                        </p>
-                                                    </div>
-                                                    <span className="font-black text-slate-900 text-lg">-${Number(exp.Amount || 0).toFixed(2)}</span>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {(activeTab === 'biweekly' || activeTab === 'monthly') && (
-                            <div className="bg-white p-12 rounded-3xl border border-slate-200 shadow-sm text-center animate-fade-in">
-                                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <i data-lucide="shield-check" className="w-10 h-10"></i>
-                                </div>
-                                <h3 className="font-bold text-xl text-slate-900 mb-2 underline decoration-blue-500 decoration-4 underline-offset-4 tracking-tight">50/30/20 Plan Active</h3>
-                                <p className="text-slate-500 text-sm max-w-xs mx-auto leading-relaxed">
-                                    Your bi-weekly income of **$1,600** is being tracked against your wealth goals. 
-                                    Continue logging daily expenses to maintain your buffer.
-                                </p>
-                            </div>
-                        )}
-                    </main>
-
-                    <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t p-2 flex gap-1 z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
-                        {[
-                            { id: 'dashboard', label: 'Home', icon: 'layout-dashboard' },
-                            { id: 'daily', label: 'Logs', icon: 'receipt' },
-                            { id: 'biweekly', label: 'Budget', icon: 'wallet' },
-                            { id: 'monthly', label: 'Growth', icon: 'trending-up' }
-                        ].map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl transition-all duration-300 ${activeTab === tab.id ? 'text-blue-600 bg-blue-50 scale-95' : 'text-slate-400 opacity-60'}`}
-                            >
-                                <i data-lucide={tab.icon} className="w-5 h-5"></i>
-                                <span className="text-[10px] font-bold uppercase tracking-tighter">{tab.label}</span>
-                            </button>
-                        ))}
-                    </nav>
-                </div>
-            );
+            showLoader(true);
+            try {
+                state = await scriptCall('addTransaction', payload);
+                render();
+                form.reset();
+                document.getElementById('date').valueAsDate = new Date();
+                showToast("Transaction synced!");
+            } finally {
+                showLoader(false);
+            }
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        window.handleDelete = async (id) => {
+            if (!confirm('Permanently remove this entry?')) return;
+            showLoader(true);
+            try {
+                state = await scriptCall('deleteTransaction', { id });
+                render();
+                showToast("Entry removed", true);
+            } finally {
+                showLoader(false);
+            }
+        };
+
+        function showToast(msg, isError = false) {
+            const toastEl = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toastEl.classList.remove('translate-y-32', 'opacity-0');
+            if (isError) toastEl.classList.add('bg-rose-600');
+            else toastEl.classList.remove('bg-rose-600');
+            
+            setTimeout(() => {
+                toastEl.classList.add('translate-y-32', 'opacity-0');
+            }, 3000);
+        }
+
+        function formatUSD(val) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+        }
+
+        function formatDate(d) {
+            return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        window.onload = init;
     </script>
 </body>
 </html>
