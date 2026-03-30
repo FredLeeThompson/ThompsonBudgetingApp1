@@ -8,56 +8,57 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Use Lucide React specifically for React components -->
+    <script src="https://unpkg.com/lucide-react"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-slate-50">
+<body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
 
     <script type="text/javascript">
         // --- PASTE YOUR GOOGLE WEB APP URL HERE ---
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxx_JQ3goYCrJJBxezdTetJbFsTpYek7vV0aFVzjefVrPM5oQxE-8L0RuGXCv-uMTEl/exec"; 
 
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, Fragment } = React;
         const { 
             LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
             AreaChart, Area, PieChart, Pie, Cell 
         } = Recharts;
+        
+        // Extracting icons from LucideReact global
         const { 
             LayoutDashboard, Receipt, Wallet, Calendar, TrendingUp, Landmark, 
-            Plus, Save, History, Trash2, Info 
-        } = lucide;
+            Plus, Save, History, Trash2, Info, ArrowUpRight, AlertCircle
+        } = LucideReact;
 
         function App() {
             const [activeTab, setActiveTab] = useState('dashboard');
             const [expenses, setExpenses] = useState([]);
             const [loading, setLoading] = useState(true);
+            const [isSaving, setIsSaving] = useState(false);
             const [newExpense, setNewExpense] = useState({ description: '', amount: '', category: 'Food' });
 
-            // Fetch data from Google Sheets
             const fetchData = async () => {
                 setLoading(true);
                 try {
-                    // Method 1: If hosted inside Google Apps Script
-                    if (typeof google !== 'undefined') {
+                    if (typeof google !== 'undefined' && google.script) {
                         google.script.run.withSuccessHandler((data) => {
-                            setExpenses(data);
+                            setExpenses(data || []);
                             setLoading(false);
                         }).getExpenses();
-                    } 
-                    // Method 2: If hosted on GitHub/Cloudflare (External)
-                    else if (SCRIPT_URL) {
-                        const response = await fetch(SCRIPT_URL + "?action=getExpenses");
+                    } else if (SCRIPT_URL) {
+                        const response = await fetch(`${SCRIPT_URL}?action=getExpenses`);
                         const data = await response.json();
-                        setExpenses(data);
+                        setExpenses(data || []);
                         setLoading(false);
                     } else {
-                        console.warn("No SCRIPT_URL provided. Using mock data.");
-                        setExpenses([{ description: 'Mock Expense', amount: 10, category: 'Misc', Date: '1/1/2026' }]);
+                        setExpenses([
+                            { Description: 'Example Expense', Amount: 15.00, Category: 'Food', Date: new Date().toLocaleDateString() }
+                        ]);
                         setLoading(false);
                     }
                 } catch (e) {
@@ -69,25 +70,32 @@
             useEffect(() => { fetchData(); }, []);
 
             const handleAddExpense = async () => {
-                if (!newExpense.amount) return;
-                setLoading(true);
+                if (!newExpense.amount || isSaving) return;
+                setIsSaving(true);
 
-                if (typeof google !== 'undefined') {
-                    google.script.run.withSuccessHandler((updatedData) => {
-                        setExpenses(updatedData);
+                try {
+                    if (typeof google !== 'undefined' && google.script) {
+                        google.script.run.withSuccessHandler((updatedData) => {
+                            setExpenses(updatedData || []);
+                            setNewExpense({ description: '', amount: '', category: 'Food' });
+                            setIsSaving(false);
+                        }).addExpense(newExpense.description, newExpense.amount, newExpense.category);
+                    } else if (SCRIPT_URL) {
+                        const params = new URLSearchParams({
+                            action: 'addExpense',
+                            description: newExpense.description,
+                            amount: newExpense.amount,
+                            category: newExpense.category
+                        });
+                        // GAS redirect requires 'no-cors' sometimes, but query params work best for GAS Web Apps
+                        await fetch(`${SCRIPT_URL}?${params.toString()}`, { method: 'POST', mode: 'no-cors' });
+                        setTimeout(fetchData, 1500); // Buffer for GAS processing
                         setNewExpense({ description: '', amount: '', category: 'Food' });
-                        setLoading(false);
-                    }).addExpense(newExpense.description, newExpense.amount, newExpense.category);
-                } else if (SCRIPT_URL) {
-                    const params = new URLSearchParams({
-                        action: 'addExpense',
-                        description: newExpense.description,
-                        amount: newExpense.amount,
-                        category: newExpense.category
-                    });
-                    await fetch(`${SCRIPT_URL}?${params.toString()}`, { method: 'POST' });
-                    fetchData(); // Refresh
-                    setNewExpense({ description: '', amount: '', category: 'Food' });
+                        setIsSaving(false);
+                    }
+                } catch (e) {
+                    console.error("Save error:", e);
+                    setIsSaving(false);
                 }
             };
 
@@ -99,99 +107,174 @@
 
             const totalSpent = expenses.reduce((sum, e) => sum + Number(e.Amount || 0), 0);
             const lifestyleLimit = 320;
+            const lifestyleRemaining = Math.max(0, lifestyleLimit - totalSpent);
 
             const NavButton = ({ id, label, icon: Icon }) => (
                 <button
                     onClick={() => setActiveTab(id)}
-                    className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl transition-all ${activeTab === id ? 'text-blue-600 bg-white shadow-sm' : 'text-slate-400'}`}
+                    className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl transition-all ${activeTab === id ? 'text-blue-600 bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                     <Icon size={20} />
-                    <span className="text-[10px] font-bold uppercase">{label}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-tight">{label}</span>
                 </button>
             );
 
-            return React.createElement('div', { className: 'min-h-screen pb-20' }, 
-                React.createElement('header', { className: 'bg-white p-4 border-b sticky top-0 z-10 flex justify-between items-center' },
+            return React.createElement('div', { className: 'min-h-screen pb-24 bg-slate-50' }, 
+                React.createElement('header', { className: 'bg-white p-4 border-b sticky top-0 z-20 flex justify-between items-center shadow-sm' },
                     React.createElement('div', { className: 'flex items-center gap-2' },
-                        React.createElement('div', { className: 'bg-blue-600 p-1.5 rounded-lg text-white' }, React.createElement(Landmark, { size: 18 })),
-                        React.createElement('h1', { className: 'font-black text-slate-800' }, 'WEALTH MASTER')
+                        React.createElement('div', { className: 'bg-blue-600 p-2 rounded-lg text-white' }, React.createElement(Landmark, { size: 18 })),
+                        React.createElement('h1', { className: 'font-black text-slate-900 tracking-tighter text-lg' }, 'WEALTH MASTER')
                     ),
                     React.createElement('div', { className: 'text-right' }, 
-                        React.createElement('p', { className: 'text-[10px] font-bold text-slate-400 uppercase' }, 'Total Savings'),
-                        React.createElement('p', { className: 'text-lg font-black text-blue-600' }, '$500.00')
+                        React.createElement('p', { className: 'text-[10px] font-bold text-slate-400 uppercase leading-none' }, 'Total Savings'),
+                        React.createElement('p', { className: 'text-lg font-black text-blue-600 leading-none mt-1' }, '$500.00')
                     )
                 ),
-                React.createElement('main', { className: 'p-4 max-w-4xl mx-auto space-y-6' },
-                    activeTab === 'dashboard' && React.createElement(React.Fragment, null,
-                        React.createElement('div', { className: 'bg-white p-6 rounded-2xl shadow-sm border' },
-                            React.createElement('h2', { className: 'font-bold text-slate-800 mb-4' }, 'Move-In Trajectory'),
+
+                React.createElement('main', { className: 'p-4 max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500' },
+                    
+                    activeTab === 'dashboard' && React.createElement(Fragment, null,
+                        React.createElement('div', { className: 'bg-white p-6 rounded-2xl shadow-sm border border-slate-200' },
+                            React.createElement('h2', { className: 'font-bold text-slate-800 mb-6 flex items-center justify-between' }, 
+                                'Move-In Trajectory',
+                                React.createElement('span', { className: 'text-xs font-normal text-slate-400 uppercase tracking-widest' }, '6 Month View')
+                            ),
                             React.createElement('div', { className: 'h-64' },
                                 React.createElement(ResponsiveContainer, { width: '100%', height: '100%' },
                                     React.createElement(AreaChart, { data: chartData },
                                         React.createElement(XAxis, { dataKey: 'name', axisLine: false, tickLine: false, tick: {fill: '#94a3b8', fontSize: 12} }),
                                         React.createElement(YAxis, { hide: true }),
-                                        React.createElement(Tooltip, { contentStyle: {borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'} }),
-                                        React.createElement(Area, { type: 'monotone', dataKey: 'amount', stroke: '#2563eb', strokeWidth: 3, fill: 'rgba(37, 99, 235, 0.1)' })
+                                        React.createElement(Tooltip, { 
+                                            contentStyle: {borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'},
+                                            formatter: (val) => [`$${val.toLocaleString()}`, 'Projected']
+                                        }),
+                                        React.createElement(Area, { 
+                                            type: 'monotone', 
+                                            dataKey: 'amount', 
+                                            stroke: '#2563eb', 
+                                            strokeWidth: 4, 
+                                            fill: 'rgba(37, 99, 235, 0.05)' 
+                                        })
                                     )
                                 )
                             )
                         ),
                         React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
-                            React.createElement('div', { className: 'bg-blue-600 p-6 rounded-2xl text-white shadow-lg shadow-blue-100' },
-                                React.createElement('p', { className: 'text-[10px] opacity-70 uppercase font-bold tracking-wider' }, 'Sept Target'),
-                                React.createElement('p', { className: 'text-2xl font-black' }, '$7,000')
+                            React.createElement('div', { className: 'bg-blue-600 p-6 rounded-2xl text-white shadow-xl shadow-blue-100 flex flex-col justify-between h-32' },
+                                React.createElement('p', { className: 'text-[10px] opacity-70 uppercase font-bold tracking-widest' }, 'Sept Target'),
+                                React.createElement('div', null,
+                                    React.createElement('p', { className: 'text-2xl font-black' }, '$7,000'),
+                                    React.createElement('p', { className: 'text-[10px] opacity-80 mt-1' }, 'Ready for NACA')
+                                )
                             ),
-                            React.createElement('div', { className: 'bg-slate-900 p-6 rounded-2xl text-white shadow-lg shadow-slate-100' },
-                                React.createElement('p', { className: 'text-[10px] opacity-70 uppercase font-bold tracking-wider' }, 'Lifestyle Buffer'),
-                                React.createElement('p', { className: 'text-2xl font-black' }, `$${(lifestyleLimit - totalSpent).toFixed(0)}`)
+                            React.createElement('div', { className: 'bg-slate-900 p-6 rounded-2xl text-white shadow-xl shadow-slate-200 flex flex-col justify-between h-32' },
+                                React.createElement('p', { className: 'text-[10px] opacity-70 uppercase font-bold tracking-widest' }, 'Daily Buffer'),
+                                React.createElement('div', null,
+                                    React.createElement('p', { className: 'text-2xl font-black' }, `$${lifestyleRemaining.toFixed(0)}`),
+                                    React.createElement('p', { className: 'text-[10px] opacity-80 mt-1' }, 'Lifestyle Remaining')
+                                )
                             )
                         )
                     ),
-                    activeTab === 'daily' && React.createElement('div', { className: 'space-y-6' },
-                        React.createElement('div', { className: 'bg-white p-6 rounded-2xl border shadow-sm' },
-                            React.createElement('h3', { className: 'font-bold mb-4 flex items-center gap-2' }, React.createElement(Plus, { size: 18, className: 'text-blue-600' }), 'Quick Log'),
+
+                    activeTab === 'daily' && React.createElement('div', { className: 'space-y-6 animate-in slide-in-from-bottom-2' },
+                        React.createElement('div', { className: 'bg-white p-6 rounded-2xl border border-slate-200 shadow-sm' },
+                            React.createElement('h3', { className: 'font-bold mb-4 flex items-center gap-2' }, 
+                                React.createElement(Plus, { size: 18, className: 'text-blue-600' }), 
+                                'Quick Log'
+                            ),
                             React.createElement('div', { className: 'space-y-4' },
                                 React.createElement('input', { 
-                                    placeholder: 'Description', 
-                                    className: 'w-full p-3 bg-slate-50 border rounded-xl outline-none',
+                                    placeholder: 'Description (e.g. Exxon Gas)', 
+                                    className: 'w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20 transition-all',
                                     value: newExpense.description,
                                     onChange: (e) => setNewExpense({...newExpense, description: e.target.value})
                                 }),
-                                React.createElement('div', { className: 'flex gap-2' },
+                                React.createElement('div', { className: 'flex gap-3' },
                                     React.createElement('input', { 
                                         type: 'number', 
-                                        placeholder: 'Amount', 
-                                        className: 'flex-1 p-3 bg-slate-50 border rounded-xl outline-none',
+                                        placeholder: '0.00', 
+                                        className: 'flex-1 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20 transition-all',
                                         value: newExpense.amount,
                                         onChange: (e) => setNewExpense({...newExpense, amount: e.target.value})
                                     }),
                                     React.createElement('select', { 
-                                        className: 'p-3 bg-slate-50 border rounded-xl outline-none',
+                                        className: 'p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-600',
                                         value: newExpense.category,
                                         onChange: (e) => setNewExpense({...newExpense, category: e.target.value})
                                     },
-                                        ['Food', 'Gas', 'Bills', 'Misc'].map(c => React.createElement('option', { key: c }, c))
+                                        ['Food', 'Gas', 'Bills', 'Misc'].map(c => React.createElement('option', { key: c, value: c }, c))
                                     )
                                 ),
                                 React.createElement('button', { 
                                     onClick: handleAddExpense,
-                                    className: 'w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2' 
-                                }, loading ? 'Processing...' : 'Save to Sheet')
+                                    disabled: isSaving || !newExpense.amount,
+                                    className: `w-full ${isSaving ? 'bg-slate-400' : 'bg-blue-600'} text-white font-black py-4 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100` 
+                                }, isSaving ? 'PROCESSING...' : 'SAVE TO SHEET')
                             )
                         ),
-                        React.createElement('div', { className: 'bg-white rounded-2xl border shadow-sm overflow-hidden' },
-                            expenses.map((exp, i) => React.createElement('div', { key: i, className: 'p-4 flex justify-between border-b last:border-0' },
+                        React.createElement('div', { className: 'bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden' },
+                            React.createElement('div', { className: 'p-4 border-b bg-slate-50 flex justify-between items-center' },
+                                React.createElement('span', { className: 'font-black text-slate-700 text-xs uppercase tracking-widest' }, 'History'),
+                                loading && React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600' })
+                            ),
+                            expenses.length === 0 ? React.createElement('p', { className: 'p-12 text-center text-slate-400 italic' }, 'No expenses found.') :
+                            expenses.map((exp, i) => React.createElement('div', { key: i, className: 'p-4 flex justify-between border-b last:border-0 hover:bg-slate-50 transition-colors' },
                                 React.createElement('div', null,
-                                    React.createElement('p', { className: 'font-bold text-sm' }, exp.Description || exp.description),
-                                    React.createElement('p', { className: 'text-[10px] text-slate-400' }, exp.Date || 'Recent')
+                                    React.createElement('p', { className: 'font-bold text-slate-800' }, exp.Description || exp.description),
+                                    React.createElement('p', { className: 'text-[10px] text-slate-400 uppercase font-bold tracking-tight mt-0.5' }, 
+                                        `${exp.Date || 'Recent'} • ${exp.Category || exp.category || 'Other'}`
+                                    )
                                 ),
-                                React.createElement('span', { className: 'font-bold text-slate-700' }, `-$${Number(exp.Amount || exp.amount).toFixed(2)}`)
+                                React.createElement('span', { className: 'font-black text-slate-900' }, `-$${Number(exp.Amount || exp.amount).toFixed(2)}`)
                             ))
+                        )
+                    ),
+
+                    activeTab === 'biweekly' && React.createElement('div', { className: 'bg-white p-8 rounded-2xl border border-slate-200 shadow-sm' },
+                        React.createElement('h2', { className: 'text-2xl font-black mb-8 border-b pb-4' }, 'BI-WEEKLY 50/30/20'),
+                        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-6' },
+                            [
+                                { title: 'Essentials', color: 'blue', val: 800 },
+                                { title: 'Wealth', color: 'emerald', val: 480 },
+                                { title: 'Lifestyle', color: 'amber', val: 320 }
+                            ].map(item => React.createElement('div', { key: item.title, className: `p-6 rounded-2xl bg-${item.color}-50 border border-${item.color}-100` },
+                                React.createElement('p', { className: `text-[10px] font-bold text-${item.color}-600 uppercase` }, item.title),
+                                React.createElement('p', { className: 'text-2xl font-black' }, `$${item.val}`),
+                                React.createElement('div', { className: `w-full h-1 bg-${item.color}-200 mt-4 rounded-full overflow-hidden` },
+                                    React.createElement('div', { className: `h-full bg-${item.color}-500`, style: {width: '100%'} })
+                                )
+                            ))
+                        )
+                    ),
+
+                    activeTab === 'monthly' && React.createElement('div', { className: 'bg-white p-8 rounded-2xl border border-slate-200 shadow-sm' },
+                        React.createElement('h2', { className: 'text-2xl font-black mb-6' }, 'MONTHLY GROWTH'),
+                        React.createElement('div', { className: 'space-y-6' },
+                            React.createElement('div', { className: 'p-6 bg-slate-900 text-white rounded-2xl' },
+                                React.createElement('p', { className: 'text-xs text-slate-400 font-bold' }, 'Total Monthly Income'),
+                                React.createElement('p', { className: 'text-3xl font-black' }, '$3,200.00'),
+                                React.createElement('p', { className: 'text-xs text-blue-400 mt-2 flex items-center gap-1' }, 
+                                    React.createElement(ArrowUpRight, { size: 14 }), 'Healthy Cashflow'
+                                )
+                            ),
+                            React.createElement('div', { className: 'p-6 border rounded-2xl' },
+                                React.createElement('h4', { className: 'font-bold mb-4' }, 'Post-Move Projections'),
+                                React.createElement('div', { className: 'space-y-3' },
+                                    [['Rent/Housing', '$1,300'], ['Auto/Tech', '$425'], ['Wealth', '$710'], ['Lifestyle', '$765']].map(([lbl, val]) => 
+                                        React.createElement('div', { key: lbl, className: 'flex justify-between text-sm' },
+                                            React.createElement('span', { className: 'text-slate-500' }, lbl),
+                                            React.createElement('span', { className: 'font-bold' }, val)
+                                        )
+                                    )
+                                )
+                            )
                         )
                     )
                 ),
-                React.createElement('nav', { className: 'fixed bottom-0 left-0 right-0 bg-slate-100 p-2 border-t flex gap-2' },
-                    React.createElement(NavButton, { id: 'dashboard', label: 'Home', icon: LayoutDashboard }),
+
+                React.createElement('nav', { className: 'fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-2 flex gap-1 z-30 shadow-[0_-1px_10px_rgba(0,0,0,0.05)]' },
+                    React.createElement(NavButton, { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }),
                     React.createElement(NavButton, { id: 'daily', label: 'Logs', icon: Receipt }),
                     React.createElement(NavButton, { id: 'biweekly', label: 'Budget', icon: Wallet }),
                     React.createElement(NavButton, { id: 'monthly', label: 'Growth', icon: Calendar })
